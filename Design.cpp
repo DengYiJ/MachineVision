@@ -1,9 +1,11 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include <iostream>
+#include <fstream> // 包含头文件
 
 using namespace cv;
 using namespace std;
+
 
 
 std::vector<Point2f> detectEdgePoints(const Mat& grayImage, const Point2f& center, double angleInterval, double edgeThreshold)
@@ -16,12 +18,16 @@ std::vector<Point2f> detectEdgePoints(const Mat& grayImage, const Point2f& cente
 
         for (double t = 0; t < std::max(grayImage.cols, grayImage.rows); t += 0.5) {
             Point2f point(center.x + t * dx, center.y + t * dy);
-            if (point.x < 0 || point.y < 0 || point.x >= grayImage.cols || point.y >= grayImage.rows) {
+            Point intPoint(cvRound(point.x), cvRound(point.y));
+            if (point.x < 0 || point.y < 0 || intPoint.x >= grayImage.cols || intPoint.y >= grayImage.rows) {
                 break;
             }
 
             // 获取像素值
-            uchar pixelValue = grayImage.at<uchar>(point);
+            //uchar pixelValue = grayImage.at<uchar>(point);
+            // 将浮点坐标转换为整数坐标
+            //Point intPoint(cvRound(point.x), cvRound(point.y));
+            uchar pixelValue = grayImage.at<uchar>(intPoint);
 
             // 判断是否为边缘点
             if (abs(pixelValue - grayImage.at<uchar>(center)) > edgeThreshold) {
@@ -34,11 +40,34 @@ std::vector<Point2f> detectEdgePoints(const Mat& grayImage, const Point2f& cente
 }
 
 
-
 int main()
 {
+
+   //Mat src;
+    // 初始化一个 ofstream 对象来写入文件
+    ofstream file("output.txt");
+
+    //// 指定图像文件夹的路径
+    //string folderPath = "C:\\Users\\Ste'fan\\Desktop\\MachineVision\\design\\Image\\";
+    
+    //// 遍历图像文件夹中的所有文件
+    //for (const auto& entry : fs::directory_iterator(folderPath)) 
+    //{
+    //    // 检查文件是否是 JPEG 格式
+    //    if (entry.path().extension() == ".jpg")
+    //    {
+    //        // 读取图像
+    //        src = imread(entry.path().string(), IMREAD_GRAYSCALE);
+    //        if (src.empty()) 
+    //        {
+    //            cout << "Could not open or find the image: " << entry.path().filename() << endl;
+    //            continue;
+    //        }
+    //    }
+    //    
+    //}
     // 读取输入图像
-    Mat src = imread("C:\\Users\\Ste'fan\\Desktop\\MachineVision\\design\\Image\\Image01.jpg", IMREAD_GRAYSCALE);//, IMREAD_GRAYSCALE
+   Mat src = imread("C:\\Users\\Ste'fan\\Desktop\\MachineVision\\design\\Image\\Image10.jpg", IMREAD_GRAYSCALE);//, IMREAD_GRAYSCALE
     if (src.empty()) {
         cout << "Could not open or find the image!" << endl;
         return -1;
@@ -49,25 +78,34 @@ int main()
         namedWindow("OriginalPicture", WINDOW_NORMAL);
 
         //调整窗口大小以适应图片大小
-        resizeWindow("OriginalPicture", src.cols, src.rows);
+        cv::resizeWindow("OriginalPicture", src.cols, src.rows);
 
         // 显示原始图片
-        imshow("OriginalPicture", src);
-        waitKey(0);
+        cv::imshow("OriginalPicture", src);
+        cv::waitKey(0);
     }
     GaussianBlur(src, src, Size(9, 9), 2, 2); // 高斯模糊
 
     // 反转图像（黑白反转）
     Mat inverted;
     bitwise_not(src, inverted);
+    namedWindow("InvertedPicture", WINDOW_NORMAL);
+    cv::resizeWindow("InvertedPicture", inverted.cols, inverted.rows);
+    cv::imshow("InvertedPicture", inverted);
+    cv::waitKey(0);
 
     Mat binarized; // 二值化图像
-    threshold(inverted, binarized, 80, 255, THRESH_BINARY);
+    //image 01 02将阈值设置为80
+    //iamge03 阈值设置为200
+    // 使用大津法计算阈值 inverted
+    double otsuThresh = threshold(inverted, binarized, 0, 255, THRESH_BINARY | THRESH_OTSU);
+
+    //threshold(inverted, binarized, 80, 255, THRESH_BINARY);
 
     namedWindow("binarizedPicture", WINDOW_NORMAL);
-    resizeWindow("binarizedPicture", binarized.cols, binarized.rows);
-    imshow("binarizedPicture", binarized);
-    waitKey(0);
+    cv::resizeWindow("binarizedPicture", binarized.cols, binarized.rows);
+    cv::imshow("binarizedPicture", binarized);
+    cv::waitKey(0);
 
     // 使用形态学操作（闭运算）去除噪声并填充椭圆内的空隙。
     Mat morph;
@@ -150,12 +188,14 @@ int main()
 
         }
     }
-    // 输出符合条件的 label 和它们的中心位置
-    std::cout << "Target Labels and original Centers: " << std::endl;
-    for (const auto& pair : targetLabelsAndCenters)
-    {
-        std::cout << "Label: " << pair.first << ", Center: (" << pair.second.x << ", " << pair.second.y << ")" << std::endl;
-    }
+    
+       
+//// 输出符合条件的 label 和它们的中心位置
+//    cout << "Target Labels and original Centers: " << std::endl;
+//    for (const auto& pair : targetLabelsAndCenters)
+//    {
+//        std::cout << "Label: " << pair.first << ", Center: (" << pair.second.x << ", " << pair.second.y << ")" << std::endl;
+//    }
 
    
 
@@ -163,39 +203,97 @@ int main()
     {
         //std::cout << "Label: " << pair.first << ", Original Center: (" << pair.second.x << ", " << pair.second.y << ")" << std::endl;
         //画出初始（未使用椭圆拟合得出）椭圆圆心，红色
-        //circle(coloredLabels, pair.second, 10, Scalar(0, 0, 255), -1);
+       // circle(coloredLabels, pair.second, 10, Scalar(0, 0, 255), -1);
         // 检测边缘点
-        std::vector<Point2f> edgePoints = detectEdgePoints(src, pair.second, 1.0, 100.0); // 1.0为角度间隔，20.0为灰度变化阈值
+        // 使用大津法计算阈值
+        //double otsuThresh = threshold(inverted, binarized, 0, 255, THRESH_BINARY | THRESH_OTSU);
+        //image03:20  src;src, pair.second, 1.0, 20
+        std::vector<Point2f> edgePoints = detectEdgePoints(binarized, pair.second, 1.0, otsuThresh); // 1.0为角度间隔，大津法计算阈值，灰度变化阈值
 
         // 绘制边缘点
-        for (const auto& edgePoint : edgePoints) 
-        {
-            circle(coloredLabels, edgePoint, 2, Scalar(0, 255, 0), -1); // 2为圆的半径，Scalar(0, 255, 0)表示绿色，-1表示实心圆
-        }
+        //for (const auto& edgePoint : edgePoints) 
+        //{
+        //    circle(coloredLabels, edgePoint, 2, Scalar(0, 255, 0), -1); // 2为圆的半径，Scalar(0, 255, 0)表示绿色，-1表示实心圆
+        //}
+        // 也就是说，绿线是画边缘的，在image3中，边缘并没有检测成圆，反而是图像角落的不重要的图像
         //用边缘点拟合椭圆
-            if (edgePoints.size() >=10 ) // 用10个点拟合椭圆
+            if (edgePoints.size() >=100 ) // 用100个点拟合椭圆
             {
                 RotatedRect ellipse = fitEllipse(edgePoints);
 
-                // 在图像上绘制椭圆
+                // 在图像上绘制椭圆(用蓝色)
                 cv::ellipse(coloredLabels, ellipse, Scalar(255, 0, 0), 2);
 
                 // 获取椭圆的亚像素中心
                 Point2f ellipseCenter = ellipse.center;
-                std::cout << "Label: " << pair.first << ",Matching Ellipse Center: (" << ellipseCenter.x << ", " << ellipseCenter.y << ")" << std::endl;
+                
+                //输出获取的亚像素中心进入文件
+                if (file.is_open())
+                {
+                    // 重定向输出到文件
+                    std::streambuf* coutbuf = std::cout.rdbuf(); // 保存原始的 cout buffer
+                    std::cout.rdbuf(file.rdbuf()); // 重定向 cout 到文件
+
+                    // 将信息输出到文件
+                    // 例如：std::cout << "Number of labels: " << numLabels << std::endl;
+                    
+                    std::cout << "Label: " << pair.first << ",Matching Ellipse Center: (" << ellipseCenter.x << ", " << ellipseCenter.y << ")" << std::endl;
+                    // 你想保存的所有输出信息
+
+                    // 恢复 cout 到原始状态
+                    std::cout.rdbuf(coutbuf);
+
+                    // 关闭文件
+                   // file.close();
+                }
+                else
+                {
+                    std::cerr << "Unable to open file for writing." << std::endl;
+                }
+
+               
 
                 // 绘制椭圆亚像素中心
-                circle(coloredLabels, ellipseCenter, 5, Scalar(255, 255, 0), -1); // 黄色圆心
+                circle(coloredLabels, ellipseCenter, 5, Scalar(255, 255, 0), -1); // 青色圆心
             }
     }
+    //输出原始椭圆中心进入文件
+     if (file.is_open()) 
+    {
+        // 重定向输出到文件
+        std::streambuf* coutbuf = std::cout.rdbuf(); // 保存原始的 cout buffer
+        std::cout.rdbuf(file.rdbuf()); // 重定向 cout 到文件
+
+        // 将信息输出到文件
+        // 例如：std::cout << "Number of labels: " << numLabels << std::endl;
+        // // 输出符合条件的 label 和它们的中心位置
+        cout << "Target Labels and original Centers: " << std::endl;
+        for (const auto& pair : targetLabelsAndCenters)
+        {
+            std::cout << "Label: " << pair.first << ", Center: (" << pair.second.x << ", " << pair.second.y << ")" << std::endl;
+        }
+
+        // 你想保存的所有输出信息
+
+        // 恢复 cout 到原始状态
+        std::cout.rdbuf(coutbuf);
+
+        // 关闭文件
+        file.close();
+    }
+    else 
+    {
+        std::cerr << "Unable to open file for writing." << std::endl;
+    }
+   
 
 
 
     // 显示标记后的图像
     namedWindow("Connected Components", WINDOW_NORMAL);
-    resizeWindow("Connected Components", coloredLabels.cols, coloredLabels.rows);
-    imshow("Connected Components", coloredLabels);
-    waitKey(0);
+    cv::resizeWindow("Connected Components", coloredLabels.cols, coloredLabels.rows);
+    cv::imshow("Connected Components", coloredLabels);
+    cv::waitKey(0);
 
   
 
