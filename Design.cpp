@@ -93,12 +93,20 @@ int main()
     cv::resizeWindow("InvertedPicture", inverted.cols, inverted.rows);
     cv::imshow("InvertedPicture", inverted);
     cv::waitKey(0);
+    
+    // 对图像进行直方图均衡化,增加对比度，很重要
+    Mat equalized_image;
+    equalizeHist(inverted, equalized_image);
+    namedWindow("equalized_image", WINDOW_NORMAL);
+    cv::resizeWindow("equalized_image", equalized_image.cols, equalized_image.rows);
+    cv::imshow("equalized_image", equalized_image);
+    cv::waitKey(0);
 
     Mat binarized; // 二值化图像
     //image 01 02将阈值设置为80
     //iamge03 阈值设置为200
     // 使用大津法计算阈值 inverted
-    double otsuThresh = threshold(inverted, binarized, 0, 255, THRESH_BINARY | THRESH_OTSU);
+    double otsuThresh = threshold(equalized_image, binarized, 0, 255, THRESH_BINARY | THRESH_OTSU);
 
     //threshold(inverted, binarized, 80, 255, THRESH_BINARY);
 
