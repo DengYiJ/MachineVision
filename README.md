@@ -22,6 +22,8 @@ blob分析主要有三部分组成
 
 1. **连通区域标记：** 使用连通区域标记算法找到图像中的连通区域（Blob），为每个不同的连通区域分配一个唯一的标记。
 
+   **反转很重要，不然检测不到！！！因为连通域检测很重要的是它检测是白色部分**
+
    label:![image-20240528201550200](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240528201550200.png)
 
    ![image-20240528201612204](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240528201612204.png)
@@ -51,6 +53,56 @@ blob分析主要有三部分组成
    利用矩计算出中心位置
 
    ![image-20240528212941039](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240528212941039.png)
+
+   提取边缘点（成功！）
+
+   每一个连通域（圆形）成功提取出了一组边缘点并打印在屏幕上
+
+   ![image-20240529110155261](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529110155261.png)
+
+   （图片展示不完全）
+
+   现在只需要在每一组边缘点提取后，先不管算法，先拟合出椭圆中心
+
+   ![image-20240529111224173](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529111224173.png)
+
+   貌似提取到了所谓的亚像素椭圆中心，但计算的慢，怎么解决，同时最好能在这个center上标记一个圆心
+
+   ![image-20240529113635511](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529113635511.png)
+
+   标记上了圆心，但明显这个圆心不是我想要的
+
+   轮廓有问题？no，我已经分割出了圆形轮廓
+
+   ![](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529114137115.png)
+
+   感觉检测到的是边缘点，是我的center不对。
+
+   ![image-20240529120705623](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529120705623.png)
+
+   说明，打印pair.second其实是识别到了圆心的
+
+   接下来利用pair.second向四周发射射线，然后判断条件是像素灰度值的剧烈变化，获得边缘点，最后在用这些边缘点拟合出椭圆中心，并画出拟合轨迹
+
+   ![image-20240529121900436](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529121900436.png)
+
+   成功检测到绿色圆的边缘以及红色圆心，阈值为50
+
+   ![image-20240529122047617](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529122047617.png)
+
+   阈值为100，边缘效果明显好了很多
+
+   ![image-20240529143128481](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529143128481.png)
+
+   成功获得亚像素中心点，效果如下
+
+   ![image-20240529143155335](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529143155335.png)
+
+   不显示原本的红色圆心后，只显示拟合圆心
+
+   ![image-20240529143929380](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529143929380.png)
+
+   ![image-20240529144203619](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529144203619.png)![image-20240529144212610](C:\Users\Ste'fan\AppData\Roaming\Typora\typora-user-images\image-20240529144212610.png)
 
 2. **特征提取：** 对每个连通区域进行特征提取，例如计算 Blob 的面积、周长、中心位置等特征。
 
